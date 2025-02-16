@@ -1,0 +1,264 @@
+<-- app.blade.php -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management</title>
+</head>
+<body>
+    
+    <h1>Task Management</h1>
+    @yield('content')
+
+</body>
+</html>
+
+
+
+<-- Index.blade.php -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task List</title>
+</head>
+<body>
+  <h1>Task List</h1>
+  <a href="{{ route('tasks.create') }}">
+    <button>Create New Task</button>
+  </a>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach($tasks as $task)
+      <tr>
+        <td>{{ $task->name }}</td>
+        <td>{{ $task->task }}</td>
+        <td>{{ $task->is_completed ? 'Completed' : 'Pending' }}</td>
+        <td>
+          @if(!$task->is_completed)
+            <form action="{{ route('tasks.markAsCompleted', $task->id) }}" method="POST">
+              @csrf
+              <button type="submit">Selsai</button>
+            </form>
+          @else
+            <form action="{{ route('tasks.markAsPending', $task->id) }}" method="POST">
+              @csrf
+              <button type="submit">Belum</button>
+            </form>
+          @endif
+
+          <a href="{{ route('tasks.edit', $task->id) }}">
+            <button>Edit</button>
+          </a>
+
+          <form action="{{ route('tasks.destroy', $task->id) }}" method="POST">
+            @csrf
+            @method('DELETE')
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      @endforeach
+    </tbody>
+  </table>
+</body>
+</html>
+
+
+
+<-- edit.blade.php -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Task</title>
+</head>
+<body>
+    <h1>Edit Task</h1>
+    <form action="{{ route('tasks.update', $task->id) }}" method="POST">
+        @csrf
+        @method('PUT') 
+        
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="{{ $task->name }}"><br>
+
+        <label for="task">Task</label>
+        <input type="text" id="task" name="task" value="{{ $task->task }}"><br>
+
+        <button type="submit">Update Task</button>
+    </form>
+    <br>
+    <a href="{{ route('tasks.index') }}">Back to Task List</a>
+</body>
+</html>
+
+
+<-- create.blade.php -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Task</title>
+</head>
+<body>
+    <h1>Create New Task</h1>
+    <form action="{{route('tasks.store')}}" method="POST">
+        @csrf
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name"><br>
+
+        <label for="name">Task</label>
+        <input type="text" id="task" name="task"><br>
+
+        <button type="submit">Save Task</button>
+    </form>
+    <br>
+    <a href="{{route('tasks.index')}}">Back Task List</a>
+</body>
+</html>
+
+
+<-- taskcontroller -->
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Task;
+use Illuminate\Http\Request;
+
+class TaskController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $tasks =  Task::all();
+        return view('tasks.index', compact('tasks'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return view('tasks.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'task' => 'required'
+        ]);
+
+        Task::create($request->all());
+        return redirect()->route('tasks.index');
+
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Task $task)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Task $task)
+    {
+        return view('tasks.edit', compact('task'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Task $task)
+    {
+        $request->validate([
+            'name' => 'required',
+            'task' => 'required'
+        ]);
+
+        $task->update($request->all());
+        return redirect()->route('tasks.index');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Task $task)
+    {
+        $task->delete();
+        return redirect()->route('tasks.index');
+    }
+
+    public function markAsCompleted(Task $task)
+    {
+        $task->update(['is_completed' => true]);
+        return redirect()->route('tasks.index');
+    }
+    
+    public function markAsPending(Task $task)
+    {
+        $task->update(['is_completed' => false]);
+        return redirect()->route('tasks.index');
+    }
+    
+}
+
+
+
+
+
+# TASK MODEL # 
+protected $fillable = ['name', 'task', 'is_completed'];
+
+
+# database #
+$table->string('name');
+$table->string('task');
+$table->boolean('is_completed')->default(false);
+
+
+# web route #
+
+<?php
+
+use App\Http\Controllers\TaskController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+
+Route::resource('tasks', TaskController::class);
+route::post('tasks/{task}/mark-completed',[TaskController::class, 'markAsCompleted'])->name('tasks.markAsCompleted');
+route::post('tasks/{task}/mark-Pending',[TaskController::class, 'markAsPending'])->name('tasks.markAsPending');
